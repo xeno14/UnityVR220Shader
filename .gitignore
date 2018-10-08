@@ -38,3 +38,6 @@ sysinfo.txt
 # VSCode
 .vscode
 Assets/VSCode*
+
+# Ignore example.jpg for now
+Assets/example.jpg*
