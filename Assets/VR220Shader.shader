@@ -45,107 +45,43 @@
 				return o;
 			}
 			
-			float linear_cos(float x) {
-				const float PI = 3.141592;
-				if (x <= PI) {
-					return 1-x*2/PI;
-				}
-				else {
-					return x*2/PI - 3;
-				}					
-			}
-
-			float2 spherical2plane (float2 v) {
-				const float PI = 3.141592;
-				float theta = v.x;
-				float phi = v.y;
-
-				float x = sin(theta) * cos(phi);
-				float y = cos(theta);
-
-				// cosを直線に置き換えるとそれっぽく見える
-				// float x = sin(theta) * (1-phi*2/PI);
-				// float y = (1-theta*2/PI);
-				// float x = sin(theta) * linear_cos(phi);
-				// float x = sin(theta) * linear_cos(phi);
-				// float y = linear_cos(theta);
-
-				return float2(x,y);
-			}
-			
 			fixed4 frag (v2f i) : SV_Target
 			{
-				// 画像の縦幅に対する魚眼画像の半径の比率
-				const float img_h_to_r = 0.5;
+				const float img_h_to_r = 0.5; 		// 画像の縦幅に対する魚眼画像の半径の比率
+				const float fisheye_radius = 1.06;	// 半径1の球面上の像を射影したときの魚眼画像の半径 (180度ならば1)
+				const float PI = 3.141592;			// 円周率
+				const float H = fisheye_radius / img_h_to_r;	// 画像横幅
+				const float W = H * 4 / 3;						// 画像縦幅
 
-				// 半径1の球面上の像を射影したときの魚眼画像の半径 (180度ならば1)
-				const float fisheye_radius = 1.06;
+				bool is_front = i.uv.x <= 0.5;		// 前面 or 背面
 
-				const float H = fisheye_radius / img_h_to_r;
-				const float W = H * 4 / 3;
+				// 前面・背面をそれぞれ[0,1]x[0,1]へマップ
+				float u = is_front ? i.uv.x * 2 : (1 - i.uv.x) * 2;
+				float v = i.uv.y;
 
-				// 前面
-				if (i.uv.x <= 0.5 ) {
-					// 前面だけを考慮するため、[0,1]へマップする
-					const float PI = 3.141592;
-					const float u = i.uv.x * 2;
-					const float v = i.uv.y;
+				// 正距円筒図法の座標系
+				float phi = u * PI;
+				float theta = v * PI;
 
-					float phi = u * PI;
-					float theta = v * PI;
+				// 球面上から平面（画像）への射影
+				float2 p = float2(sin(theta) * cos(phi), cos(theta) * (-1));
 
-					// 球面上からのマッピング
-					float2 xy = spherical2plane(float2(theta, phi));
-					float x = xy.x;
-					float y = xy.y;
+				// そのままだと画像が歪むので補正
+				// 平面（画像）上の極座標で見たときの長さを調整する
+				float2 n = normalize(p);
+				float r = length(p);
+				float psi = acos(r);
+				float r2 = is_front ? abs(1-2/PI*psi) : abs(1+2/PI*psi);
+				float2 p2 = n * r2;
 
-					float r = sqrt(x*x+y*y);
-					float2 n = xy / r;
-					float psi = acos(r);
-					xy = n * abs(1-2/PI*psi);
-					x = xy.x;
-					y = xy.y * (-1);
+				// 範囲外にある部分は黒塗り
+				if (!is_front && length(p2) >= fisheye_radius)
+					return fixed4(0,0,0,1);
 
-					float u_img = (x/W*2+1)/2;
-					float v_img = (y/H*2+1)/2;
-
-					float2 coord = float2(u_img, v_img);
-
-					fixed4 col = tex2D(_MainTex, coord);
-					return col;
-				}
-				// 背面
-				else {
-					// だけを考慮するため、[0,1]へマップする
-					const float u = (i.uv.x - 0.5) * 2;
-					const float v = i.uv.y;
-
-					const float PI = 3.141592;
-					float phi = u * PI;
-					float theta = v * PI;
-					
-					float2 xy = spherical2plane(float2(theta, phi));
-					xy.x *= -1;
-					xy.y *= -1;
-					float x = xy.x;
-					float y = xy.y;
-					float r = sqrt(x*x+y*y);
-					float2 n = xy / r;
-					float psi = acos(r);
-					xy = n * (1+psi*2/PI);
-					x = xy.x;
-					y = xy.y;
-					if (x*x+y*y >= fisheye_radius*fisheye_radius)
-						return fixed4(0,0,0,1);
-
-					float u_img = (x/W*2+1)/2;
-					float v_img = (y/H*2+1)/2;
-
-					float2 coord = float2(u_img, v_img);
-
-					fixed4 col = tex2D(_MainTex, coord);
-					return col;
-				}
+				// 画像のuv座標への変換とテクスチャの取得
+				float2 coord = float2(p2.x/W+0.5, p2.y/H+0.5);
+				fixed4 col = tex2D(_MainTex, coord);
+				return col;
 			}
 			ENDCG
 		}
