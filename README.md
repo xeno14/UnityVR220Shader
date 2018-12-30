@@ -1,0 +1,2 @@
+# UnityVR220Shader
+Raspberry Pi用超広角レンズVR220をUnity上で天球にマップするシェーダー
