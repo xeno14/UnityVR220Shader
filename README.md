@@ -5,4 +5,4 @@ Raspberry Pi用超広角レンズ[VR220](http://products.entaniya.co.jp/products
 
 
 
-サンプル画像 （C）Entaniya 
+サンプル画像 （C）[Entaniya](http://products.entaniya.co.jp/)
