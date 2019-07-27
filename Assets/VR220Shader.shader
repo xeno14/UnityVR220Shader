@@ -68,6 +68,9 @@
 				float u = 2*i.uv.x - 1;
 				float v = i.uv.y;
 
+				// 左右反転（法線を反転したので）
+				u = 1 - u;
+
 				// 正距円筒図法の座標系
 				float phi = -PI/2 + u * PI;
 				float theta = v * PI;
