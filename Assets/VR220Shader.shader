@@ -78,9 +78,8 @@
 				float2 p = float2(x, y);
 
 				// 画像のuv座標への変換とテクスチャの取得
-				float2 p_img = float2(p.x/W+0.5, p.y/H+0.5);
-				fixed4 col = tex2D(_MainTex, p_img);
-				return col;
+				float2 uv_img = float2(p.x/W+0.5, p.y/H+0.5);
+				return tex2D(_MainTex, uv_img);
 			}
 			ENDCG
 		}
